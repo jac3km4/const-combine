@@ -2,7 +2,7 @@
 macro_rules! const_combine {
     ($A:expr, $B:expr) => {
         unsafe {
-            std::mem::transmute::<&[u8], &str>(
+            std::str::from_utf8_unchecked(
                 $crate::internal::combine::<{ $A.len() + $B.len() }>($A, $B).as_slice(),
             )
         }
@@ -14,7 +14,7 @@ macro_rules! const_combine {
 macro_rules! const_combine_bounded_with {
     ($A:expr, $B:expr, $max_size:expr) => {
         unsafe {
-            std::mem::transmute::<&[u8], &str>($crate::internal::take_n(
+            std::str::from_utf8_unchecked($crate::internal::take_n(
                 &$crate::internal::combine::<$max_size>($A, $B),
                 $A.len() + $B.len(),
             ))
