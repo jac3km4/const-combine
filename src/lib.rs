@@ -1,5 +1,3 @@
-pub use const_combine_macros::str_len;
-
 // based on https://users.rust-lang.org/t/concatenate-const-strings/51712/5
 pub const fn combine<const L: usize>(a: &'static str, b: &'static str) -> [u8; L] {
     let mut out = [0u8; L];
@@ -44,20 +42,20 @@ macro_rules! combine {
     ($A:expr, $B:expr) => {
         unsafe {
             std::mem::transmute::<&[u8], &str>(
-                $crate::combine::<{ $crate::str_len!($A) + $crate::str_len!($B) }>($A, $B)
-                    .as_slice(),
+                $crate::combine::<{ $A.len() + $B.len() }>($A, $B).as_slice(),
             )
         }
     };
 }
 
+/// useful when above doesn't work due to const expression limitations
 #[macro_export]
 macro_rules! combine_buf_sized {
     ($A:expr, $B:expr, $max_size:expr) => {
         unsafe {
             std::mem::transmute::<&[u8], &str>($crate::take_n(
                 &$crate::combine::<$max_size>($A, $B),
-                $crate::str_len!($A) + $crate::str_len!($B),
+                $A.len() + $B.len(),
             ))
         }
     };
