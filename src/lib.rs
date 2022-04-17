@@ -24,16 +24,51 @@ pub const fn copy_slice<const L: usize>(
     output
 }
 
+pub const fn take_n(input: &[u8], n: usize) -> &[u8] {
+    let mut index = input.len();
+    let mut slice = input;
+    loop {
+        match slice.split_last() {
+            None => return slice,
+            Some(_) if index == n => return slice,
+            Some((_, tail)) => {
+                slice = tail;
+                index -= 1;
+            }
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! combine {
-    ($A:expr, $B:expr) => {{
+    ($A:expr, $B:expr) => {
         unsafe {
             std::mem::transmute::<&[u8], &str>(
                 $crate::combine::<{ $crate::str_len!($A) + $crate::str_len!($B) }>($A, $B)
                     .as_slice(),
             )
         }
-    }};
+    };
+}
+
+#[macro_export]
+macro_rules! combine_buf_sized {
+    ($A:expr, $B:expr, $max_size:expr) => {
+        unsafe {
+            std::mem::transmute::<&[u8], &str>($crate::take_n(
+                &$crate::combine::<$max_size>($A, $B),
+                $crate::str_len!($A) + $crate::str_len!($B),
+            ))
+        }
+    };
+}
+
+/// does not work for strings larger than 1024 bytes
+#[macro_export]
+macro_rules! combine_buf {
+    ($A:expr, $B:expr) => {
+        $crate::combine_buf_sized!($A, $B, 1024)
+    };
 }
 
 #[cfg(test)]
@@ -45,5 +80,14 @@ mod tests {
         assert_eq!(combine!(STR, "def"), "abcdef");
         assert_eq!(combine!("def", STR), "defabc");
         assert_eq!(combine!(STR, STR), "abcabc");
+    }
+
+    #[test]
+    fn concat_strings_sized() {
+        const STR: &str = "abc";
+
+        assert_eq!(combine_buf!(STR, "def"), "abcdef");
+        assert_eq!(combine_buf!("def", STR), "defabc");
+        assert_eq!(combine_buf!(STR, STR), "abcabc");
     }
 }
